@@ -90,6 +90,7 @@ class Sine_fit : Solution!(Sine_fit) {
 	
 	//reroute for constructor from Population
 	//exands args to main constructor
+	//bool is just to help the compiler find this
 	this(U...)(bool w_args, int id, U args) {
 		this(args[0], args[1], id);
 	}
