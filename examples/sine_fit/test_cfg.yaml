@@ -1,22 +1,22 @@
 solution:
 #set_1:
   - amplitude:
-        min:            0
-        max:            2
-        mut_min:        0
-        mut_max:        0.1
+        min:			0
+        max:			2
+        mut_min:		0
+        mut_max:		0.1
     frequency:
-        min:            0
-        max:            2
-        mut_min:        0
-        mut_max:        0.1
+        min:			0
+        max:			2
+        mut_min:		0
+        mut_max:		0.1
     phase:
-        min:            0
-        max:            0
-        mut_min:        0
-        mut_max:        0
+        min:			0
+        max:			0
+        mut_min:		0
+        mut_max:		0
     offset:
-        min:            0
-        max:            0
-        mut_min:        0
-        mut_max:        0
+        min:			0
+        max:			0
+        mut_min:		0
+        mut_max:		0

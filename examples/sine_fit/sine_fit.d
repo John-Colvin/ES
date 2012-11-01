@@ -43,8 +43,10 @@ class Sine_fit : Solution!(Sine_fit) {
 	int num_waves;
 	Init_params init_params;
 	
-/*	//basic constructor for a blank sine_fit
-	this(int num_waves) {
+	//basic constructor for a blank sine_fit
+	//has to be template to overcome bug in d
+	this(T)(T num_waves_in) {
+		int num_waves = num_waves_in; 
 		this.num_waves = num_waves;
 		amplitude = new double[num_waves];
 		frequency = new double[num_waves];
@@ -57,10 +59,11 @@ class Sine_fit : Solution!(Sine_fit) {
 			phase[i] = 0;
 			offset[i] = 0;
 		}
-	}*/
+	}
 
 	//full constructor including solution initialisation
-	this(Problem!Sine_fit problem, Init_params params, int id) {
+	//has to be a template to work around a bug in d, use Problem!Sine_fit
+	this(T)(T problem, Init_params params, int id) {
 /*		if(id == -1)
 			this(params.num_waves);
 		else*/ {	
@@ -87,7 +90,7 @@ class Sine_fit : Solution!(Sine_fit) {
 	
 	//reroute for constructor from Population
 	//exands args to main constructor
-	this(U...)(U args, int id) {
+	this(U...)(bool w_args, int id, U args) {
 		this(args[0], args[1], id);
 	}
 	
@@ -121,12 +124,13 @@ class Sine_fit : Solution!(Sine_fit) {
 	
 	static Sine_fit average(Sine_fit[] sols) {
 		Sine_fit av = new Sine_fit(sols[0].num_waves);
-		foreach(int i, dummy; amplitude) {
-			av.amplitude[i] += rhs.amplitude[i];
-			av.frequency[i] += rhs.frequency[i];
-			av.phase[i] += rhs.phase[i];
-			av.offset[i] += rhs.offset[i];
-		}
+		foreach(sol; sols)
+			for(int i=0; i<sols[0].num_waves; ++i) {
+				av.amplitude[i] += sol.amplitude[i];
+				av.frequency[i] += sol.frequency[i];
+				av.phase[i] += sol.phase[i];
+				av.offset[i] += sol.offset[i];
+			}
 		av /= sols.length;
 		return av;
 	}
@@ -143,17 +147,17 @@ class Sine_fit : Solution!(Sine_fit) {
 		else
 			static assert(0, "Operator "~op~" not implemented for type Sine_fit");
 	}*/
-	void opAssign(string op)(double rhs) {
-		static if(op == "/=") {
+	void opOpAssign(string op, T)(T rhs) {
+		static if(op == "/") {
 			foreach(int i, dummy; amplitude) {
-				amplitude[i] /= rhs.amplitude[i];
-				frequency[i] /= rhs.frequency[i];
-				phase[i] /= rhs.phase[i];
-				offset[i] /= rhs.offset[i];
+				amplitude[i] /= rhs;
+				frequency[i] /= rhs;
+				phase[i] /= rhs;
+				offset[i] /= rhs;
 			}
 		}
 		else
-			static assert(0, "Operator "~op~" not implemented for type double");
+			static assert(0, "Operator "~op~" not implemented");
 	}
 }
 

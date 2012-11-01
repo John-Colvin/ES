@@ -3,6 +3,10 @@ import std.datetime, std.conv, std.math, std.array;
 import yaml, orange.util.Reflection, JCutils;
 import std.exception;
 
+// need to add support for memory. Maybe need population to be list of lists?
+// keep track of best so far. Need some more general way of processing the
+// info. Not really sure how
+
 //Population class, holds the core runnings of the algorithm, including 
 //initialization of solutions;
 class Population (T) {
@@ -13,32 +17,39 @@ class Population (T) {
 	int pop_size;
 	bool top_sorted = false;
 	bool full_sorted = false;
+	bool partitioned = false;
 	bool parent_list_up_to_date = false;
-	T tmp;
+	string style;
 	
 	//initialises the population
 	//initialise the solutions, allocate memory for parents etc...
-	this(U...)(int pop_size, int init_num_parents, U args) {
-	
+	this(U...)(int pop_size, int init_num_parents, U args, string style="old") {
+		this.pop_size = pop_size;
 		solutions = new T[pop_size];
 		writefln("Initialising solutions: pop_size = %d	init_num_parents = %d",
 				 pop_size,init_num_parents);
 		
 		foreach(int i, ref solution; solutions) {
-			solution = new T(args, i);
+			solution = new T(true, i, args);
 		}
 		
-		parents = new int[pop_size];
-		parents = parents[0..init_num_parents];
+		this.style = style;
+		if(cmp(style,"new") != 0) {
+			parents = new int[1];
+			num_parents = 1;
+		}
+		else if(cmp(style,"old") != 0) {
+			parents = new int[pop_size];         //why am I doing this
+			parents = parents[0..init_num_parents];  //and this????
+			num_parents = init_num_parents;
+			if(fmod(pop_size - num_parents,num_parents))
+				throw new Exception("pop_size - num_parents must be divisible by num_parents");
+		}
+		else
+			throw new Exception("style \""~style~"\" not supported");
 		
-		num_parents = init_num_parents;
-		this.pop_size = pop_size;
-		if(fmod(pop_size - num_parents,num_parents))
-			throw new Exception("pop_size - num_parents must be divisible by num_parents");
 		num_offspring = (pop_size - num_parents) / num_parents;
 		writeln("num_offspring = ",num_offspring);
-		
-		tmp = new T(args, -1);
 	}
 	
 	//runs the algorithm
@@ -114,11 +125,15 @@ class Population (T) {
 		partialSort(solutions, num_parents);
 		assert(solutions[0] == minPos(solutions)[0]);
 		top_sorted = true; //added with partialSort()
+		partitioned = true;
 	}
 	
 	//Selects the parents from the evaluated population
 	//parents MUST be unique!!!!
 	void select() {
+/*		if(cmp(style,"new") != 0) {
+			parents[0] = 
+		}*/
 		foreach(int i, ref parent; parents)
 			parent = i;
 		sort(parents);
@@ -150,13 +165,16 @@ class Population (T) {
 			}
 		}
 		top_sorted = false;
+		full_sorted = false;
+		partitioned = false;
 	}
 	
-	auto child_vector() {
-		if(top_sorted) {
-			
+	T child() {
+		if(!partitioned) {
+			topN(solutions, num_parents);
+			partitioned = true;
 		}
-		
+		return T.average(solutions);		
 	}
 };
 

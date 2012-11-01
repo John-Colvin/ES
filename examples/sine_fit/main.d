@@ -4,7 +4,7 @@ import sine_fit;
 void main(string[] args) {
 //	FloatingPointControl fpctrl;
 //	fpctrl.enableExceptions(FloatingPointControl.severeExceptions);     //for debugging
-	if(args.length != 8) {
+	if(args.length != 9) {
 		throw new Exception("Incorrect number of arguments. Should be 7");
 /*		writeln("using defaults");
 		args = new string[6];
@@ -14,7 +14,8 @@ void main(string[] args) {
 		args[4] = "4";
 		args[5] = "4";
 		args[6] = "1000";
-		args[7] = "0.2";*/
+		args[7] = "0.2";
+		args[8] = "new"*/
 	}
 	
 	auto problem = new Data_fit(args[1],to!int(args[6]),to!double(args[7]));
@@ -25,8 +26,9 @@ void main(string[] args) {
 	auto pop_size = to!int(args[3]);
 	auto num_parents = to!int(args[4]);
 	auto num_generations = to!int(args[5]);
+	auto style = args[8];
 	
-	auto population = new Population!(Sine_fit)(pop_size,num_parents,problem,init_params);
+	auto population = new Population!(Sine_fit)(pop_size,num_parents,problem,init_params,style);
 
 	population.run(num_generations);
 	
