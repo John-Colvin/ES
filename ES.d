@@ -10,8 +10,9 @@ import std.exception;
 //Population class, holds the core runnings of the algorithm, including 
 //initialization of solutions;
 class Population (T) {
+    T[] history;
 	T[] solutions;
-	int[] parents;
+	T[] parents;
 	int num_parents;
 	int num_offspring;
 	int pop_size;
@@ -35,20 +36,20 @@ class Population (T) {
 		
 		this.style = style;
 		if(cmp(style,"new") != 0) {
-			parents = new int[1];
+			parents = new T[1];
 			num_parents = 1;
+			num_offspring = pop_size;
 		}
 		else if(cmp(style,"old") != 0) {
-			parents = new int[pop_size];         //why am I doing this
-			parents = parents[0..init_num_parents];  //and this????
+			parents = new T[init_num_parents];
 			num_parents = init_num_parents;
 			if(fmod(pop_size - num_parents,num_parents))
 				throw new Exception("pop_size - num_parents must be divisible by num_parents");
+			num_offspring = (pop_size - num_parents) / num_parents;
 		}
 		else
 			throw new Exception("style \""~style~"\" not supported");
 		
-		num_offspring = (pop_size - num_parents) / num_parents;
 		writeln("num_offspring = ",num_offspring);
 	}
 	
@@ -130,38 +131,39 @@ class Population (T) {
 	
 	//Selects the parents from the evaluated population
 	//parents MUST be unique!!!!
+	//assumes sorted
 	void select() {
-/*		if(cmp(style,"new") != 0) {
-			parents[0] = 
-		}*/
-		foreach(int i, ref parent; parents)
-			parent = i;
-		sort(parents);
+		if(cmp(style,"new") != 0) {
+			parents[0] = child();
+		}
+		else
+			foreach(int i, parent; parents)
+				parent = solutions[i];
+		//sort(parents);    //this will need changing, ok for now as parents are
+							//already in order
 		parent_list_up_to_date = true;
 	}
 	
-	//Replaces solutions not selected as parents with mutations from parents.
-	//assumes parents is in same order as sols and parents only contains 
-	//unique values.
-	//Still not 100% about this, but it seems to work. I doubt this a slow bit
-	//but could easily resort to pointers here if necessary.
+    //new simpler version of replace()
 	void replace() {
-		parent_list_up_to_date = false;		//in the case of a , strat, not in +
-		int pos = 0, next_skip = 0;
-		foreach(parent; parents) {
-			int j;
-			j=0;
-			while (j<num_offspring) {
-				if(pos == parents[next_skip]) {
-					if(next_skip < num_parents - 1)
-						++next_skip;
-				}
-				else {
-//					writeln("pos for mutation: ",pos,"   parent: ",parent);
-					solutions[pos]._mutate(solutions[parent]);
-					++j;
-				}
-				++pos;
+		int skip = 0, par_ind = 0;
+		T to_skip = parents[skip];
+		T parent = parents[par_ind];
+		int children_so_far = 0;
+		
+		foreach(sol; solutions) {
+			//if we're on the first parent, skip it and start watching
+			//for the next one.
+			if(is(sol == to_skip)) {   //will this work??  should do
+				to_skip = parents[++skip];
+				continue;
+			}
+			sol._mutate(parent);	//modify sol based on parent
+			children_so_far++;		//add one to the child counter
+			//check if given sol has had enough offspring
+			if(children_so_far >= num_offspring) {	
+				parent = parents[++par_ind];	//move to next parent
+				children_so_far = 0;			//reset child counter
 			}
 		}
 		top_sorted = false;
@@ -174,8 +176,41 @@ class Population (T) {
 			topN(solutions, num_parents);
 			partitioned = true;
 		}
-		return T.average(solutions);		
+		return T.average(solutions);	
 	}
+    
+	//this doesn't work with the new parents
+	/+
+	//Replaces solutions not selected as parents with mutations from parents.
+	//assumes parents is in same order as sols and parents only contains 
+	//unique values.
+	//Still not 100% about this, but it seems to work. I doubt this a slow bit
+	//but could easily resort to pointers here if necessary.
+	void _replace() {
+		parent_list_up_to_date = false;		//in the case of a , strat, not in +
+		int pos = 0, next_skip = 0;
+		foreach(parent; parents) {
+			int j;
+			j=0;
+			//scan over population from position of last mutation, skipping
+			//any parents.
+			while (j<num_offspring) {
+				if(is(solutions[pos] == parents[next_skip])) {
+					if(next_skip < num_parents - 1)
+						++next_skip;
+				}
+				else {
+					solutions[pos]._mutate(solutions[parent]);
+					++j;
+				}
+				++pos;
+			}
+		}
+		top_sorted = false;
+		full_sorted = false;
+		partitioned = false;
+	}
+	+/
 };
 
 //Base class for solutions. It is aware of both it's immediately derived 
