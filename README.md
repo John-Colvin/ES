@@ -1,6 +1,9 @@
 ES
 ==
 
+new_algo branch:
+implements some new more flexible internals, including a change from parents being integer indexes to being class references
+
 A simple evolutionary strategies package for D.
 
 This is a work in progress and might completely change overnight. Be warned.
