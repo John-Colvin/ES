@@ -16,6 +16,7 @@ class Population (T) {
 	int num_parents;
 	int num_offspring;
 	int pop_size;
+    int num_generations;
 	bool top_sorted = false;
 	bool full_sorted = false;
 	bool partitioned = false;
@@ -24,11 +25,12 @@ class Population (T) {
 	
 	//initialises the population
 	//initialise the solutions, allocate memory for parents etc...
-	this(U...)(int pop_size, int init_num_parents, U args, string style="old") {
-		this.pop_size = pop_size;
+	this(U...)(U args, string cfg_fn) {
+        read_ES_config(cfg_fn);
+        
 		solutions = new T[pop_size];
 		writefln("Initialising solutions: pop_size = %d	init_num_parents = %d",
-				 pop_size,init_num_parents);
+				 pop_size,num_parents);
 		
 		foreach(int i, ref solution; solutions) {
 			solution = new T(true, i, args);
@@ -41,8 +43,7 @@ class Population (T) {
 			num_offspring = pop_size;
 		}
 		else if(cmp(style,"old") != 0) {
-			parents = new T[init_num_parents];
-			num_parents = init_num_parents;
+			parents = new T[num_parents];
 			if(fmod(pop_size - num_parents,num_parents))
 				throw new Exception("pop_size - num_parents must be divisible by num_parents");
 			num_offspring = (pop_size - num_parents) / num_parents;
@@ -54,7 +55,7 @@ class Population (T) {
 	}
 	
 	//runs the algorithm
-	void run(int num_generations) {
+	void run() {
 		//create output files. This should be dealt with elsewhere.
 		try	mkdir("results");
 		catch(FileException e) {}
@@ -154,7 +155,7 @@ class Population (T) {
 		foreach(sol; solutions) {
 			//if we're on the first parent, skip it and start watching
 			//for the next one.
-			if(is(sol == to_skip)) {   //will this work??  should do
+			if(sol is to_skip) {   //will this work??  should do
 				to_skip = parents[++skip];
 				continue;
 			}
@@ -178,6 +179,15 @@ class Population (T) {
 		}
 		return T.average(solutions);	
 	}
+    
+    void read_ES_config(string filename) {
+        Node root = Loader(filename).load();
+        
+        pop_size = root["pop_size"].as!int;
+        num_parents = root["num_parents"].as!int;
+        num_generations = root["num_generations"].as!int;
+        style = root["style"].as!string;        
+    }
     
 	//this doesn't work with the new parents
 	/+
