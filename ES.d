@@ -3,25 +3,30 @@ import std.datetime, std.conv, std.math, std.array;
 import yaml, orange.util.Reflection, JCutils;
 import std.exception;
 
-// need to add support for memory. Maybe need population to be list of lists?
-// keep track of best so far. Need some more general way of processing the
-// info. Not really sure how
+//processing topology info? Not really sure how
 
 //Population class, holds the core runnings of the algorithm, including 
 //initialization of solutions;
-class Population (T) {
-    T[] history;
+class Population(T) {
+    T[][] history;
+    T[] history_best;
 	T[] solutions;
 	T[] parents;
+    
 	int num_parents;
 	int num_offspring;
 	int pop_size;
     int num_generations;
+    
 	bool top_sorted = false;
 	bool full_sorted = false;
 	bool partitioned = false;
 	bool parent_list_up_to_date = false;
+    bool memory = false;
+    
 	string style;
+    string foldername;
+    File fitness;
 	
 	//initialises the population
 	//initialise the solutions, allocate memory for parents etc...
@@ -33,16 +38,17 @@ class Population (T) {
 				 pop_size,num_parents);
 		
 		foreach(int i, ref solution; solutions) {
-			solution = new T(true, i, args);
+			solution = new T(i, args);
 		}
-		
-		this.style = style;
-		if(cmp(style,"new") != 0) {
+        
+		if(cmp(style,"new") == 0) {
+            writeln("using new style");
 			parents = new T[1];
-			num_parents = 1;
 			num_offspring = pop_size;
+            memory = true;
 		}
-		else if(cmp(style,"old") != 0) {
+		else if(cmp(style,"old") == 0) {
+            writeln("using old style");
 			parents = new T[num_parents];
 			if(fmod(pop_size - num_parents,num_parents))
 				throw new Exception("pop_size - num_parents must be divisible by num_parents");
@@ -55,15 +61,7 @@ class Population (T) {
 	}
 	
 	//runs the algorithm
-	void run() {
-		//create output files. This should be dealt with elsewhere.
-		try	mkdir("results");
-		catch(FileException e) {}
-		auto time_stamp = Clock.currTime().toISOExtString()[0..19];
-		auto foldername = "results/output_" ~ time_stamp;
-		mkdir(foldername);
-		auto fitness = File("fitness.txt","w");
-		
+	void run() {		
 		//iterate over generations.
 		for(int i=1; i<=num_generations; ++i) {
 			write("\rgeneration: ",i,"  ");
@@ -71,12 +69,14 @@ class Population (T) {
 			
 			evaluate();	
 			_sort();
-			
-//			writeln(solutions[0]);
-			auto record = File(foldername~"/gen"~to!string(i),"w");
-			record.write(csv_dump());
-//			writeln("\n",solutions);
-			fitness.write(solutions[0].fitness,"\n");
+            
+            if(memory) {
+                history ~= class_arr_dup(solutions);
+                topN(history_best, history[$-1]);
+                history_best
+            }
+            
+            write_out(i);
 			
 			select();
 			replace();
@@ -86,6 +86,23 @@ class Population (T) {
 		sort(solutions);
 		writeln();
 	}
+    
+    void output_files_init() {
+        try	mkdir("results");
+		catch(FileException e) {}
+		auto time_stamp = Clock.currTime().toISOExtString()[0..19];
+		foldername = "results/output_" ~ time_stamp;
+		mkdir(foldername);
+		fitness = File("fitness.txt","w");
+    }
+    
+    void write_out(int gen_num) {
+//		writeln(solutions[0]);
+        auto record = File(foldername~"/gen"~to!string(gen_num),"w");
+		record.write(csv_dump());
+//		writeln("\n",solutions);
+		fitness.write(solutions[0].fitness,"\n");
+    }
 	
 	//dumps the all the solutions (paramters as csv, see 
 	string csv_dump() {
@@ -96,7 +113,7 @@ class Population (T) {
 		return app.data;
 	}
 	
-	//returns the best solution to date
+	//returns the best solutions to date
 	T[] best(int n=1) {
 		enforce(n>0);
 		if(n==1) {
@@ -134,11 +151,12 @@ class Population (T) {
 	//parents MUST be unique!!!!
 	//assumes sorted
 	void select() {
-		if(cmp(style,"new") != 0) {
+		if(cmp(style,"new") == 0) {
 			parents[0] = child();
+            writeln(parents[0]);
 		}
 		else
-			foreach(int i, parent; parents)
+			foreach(int i, ref parent; parents)
 				parent = solutions[i];
 		//sort(parents);    //this will need changing, ok for now as parents are
 							//already in order
@@ -151,19 +169,25 @@ class Population (T) {
 		T to_skip = parents[skip];
 		T parent = parents[par_ind];
 		int children_so_far = 0;
-		
-		foreach(sol; solutions) {
+        auto end_of_parents = parents.length - 1;   //not same as num_parents
+                                                    //in new style unfortunately
+		foreach(int i, sol; solutions) {
 			//if we're on the first parent, skip it and start watching
 			//for the next one.
-			if(sol is to_skip) {   //will this work??  should do
-				to_skip = parents[++skip];
+			if(sol is to_skip) {
+                if(skip < end_of_parents)
+                    to_skip = parents[++skip];
+                else
+                    to_skip = null;
 				continue;
 			}
 			sol._mutate(parent);	//modify sol based on parent
 			children_so_far++;		//add one to the child counter
+            
 			//check if given sol has had enough offspring
-			if(children_so_far >= num_offspring) {	
-				parent = parents[++par_ind];	//move to next parent
+			if(children_so_far >= num_offspring) {
+                if(par_ind < end_of_parents)
+                    parent = parents[++par_ind];	//move to next parent
 				children_so_far = 0;			//reset child counter
 			}
 		}
@@ -177,7 +201,12 @@ class Population (T) {
 			topN(solutions, num_parents);
 			partitioned = true;
 		}
-		return T.average(solutions);	
+        auto to_average = solutions[0..num_parents]
+        if(memory) {
+            partialSort(history_flat, num_parents);
+            
+        }
+		return T.average();
 	}
     
     void read_ES_config(string filename) {
@@ -186,41 +215,8 @@ class Population (T) {
         pop_size = root["pop_size"].as!int;
         num_parents = root["num_parents"].as!int;
         num_generations = root["num_generations"].as!int;
-        style = root["style"].as!string;        
+        style = root["style"].as!string;
     }
-    
-	//this doesn't work with the new parents
-	/+
-	//Replaces solutions not selected as parents with mutations from parents.
-	//assumes parents is in same order as sols and parents only contains 
-	//unique values.
-	//Still not 100% about this, but it seems to work. I doubt this a slow bit
-	//but could easily resort to pointers here if necessary.
-	void _replace() {
-		parent_list_up_to_date = false;		//in the case of a , strat, not in +
-		int pos = 0, next_skip = 0;
-		foreach(parent; parents) {
-			int j;
-			j=0;
-			//scan over population from position of last mutation, skipping
-			//any parents.
-			while (j<num_offspring) {
-				if(is(solutions[pos] == parents[next_skip])) {
-					if(next_skip < num_parents - 1)
-						++next_skip;
-				}
-				else {
-					solutions[pos]._mutate(solutions[parent]);
-					++j;
-				}
-				++pos;
-			}
-		}
-		top_sorted = false;
-		full_sorted = false;
-		partitioned = false;
-	}
-	+/
 };
 
 //Base class for solutions. It is aware of both it's immediately derived 

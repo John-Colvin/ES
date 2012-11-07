@@ -1,4 +1,22 @@
 import orange.util.Reflection : nameOfFieldAt;
+import std.range : lockstep;
+
+auto class_arr_dup(T)(T[] array) {
+    T[] res = new T[array.length]; 
+    foreach(el_old, ref el_new; lockstep(array,res)) {
+        el_new = new T(el_old);
+    }
+    return res;
+}
+
+auto class_arr_dup_mt(T)(T[] array) {
+    T[] res = new T[array.length];
+    foreach(el_old, ref el_new; taskPool.parallel(lockstep(array,res))) {
+        el_new = new T(el_old);
+    }
+    return res;
+}
+
 
 //provides an associative array, by name, of the fields of obj
 //that are of type U. Useful for reading in config files or for

@@ -45,8 +45,7 @@ class Sine_fit : Solution!(Sine_fit) {
 	
 	//basic constructor for a blank sine_fit
 	//has to be template to overcome bug in d
-	this(T)(T num_waves_in) {
-		int num_waves = num_waves_in; 
+	this(T=bool)(int num_waves_in) {
 		this.num_waves = num_waves;
 		amplitude = new double[num_waves];
 		frequency = new double[num_waves];
@@ -59,11 +58,13 @@ class Sine_fit : Solution!(Sine_fit) {
 			phase[i] = 0;
 			offset[i] = 0;
 		}
+        
+        fitness = double.infinity;
 	}
 
 	//full constructor including solution initialisation
-	//has to be a template to work around a bug in d, use Problem!Sine_fit
-	this(T)(T problem, Init_params params, int id) {
+	//has to be a template to work around a bug in D
+	this(T=bool)(Problem!Sine_fit problem, Init_params params, int id) {
 /*		if(id == -1)
 			this(params.num_waves);
 		else*/ {	
@@ -89,10 +90,21 @@ class Sine_fit : Solution!(Sine_fit) {
 	}
 	
 	//reroute for constructor from Population
-	//exands args to main constructor
-	this(U...)(bool w_args, int id, U args) {
+	//exands args to main constructor.
+	this(U...)(int id, U args) {
 		this(args[0], args[1], id);
 	}
+    
+    //copy constructor. Again, has to be a bloody template.....
+    this(T = bool)(Sine_fit a) {
+        num_waves = a.num_waves;
+        init_params = a.init_params;
+        
+        amplitude = a.amplitude.dup;
+		frequency = a.frequency.dup;
+		phase = a.phase.dup;
+		offset = a.offset.dup;
+    }
 	
 	override void mutate(Sine_fit parent) {
 		foreach(int i, dummy; amplitude) {
@@ -157,8 +169,24 @@ class Sine_fit : Solution!(Sine_fit) {
 			}
 		}
 		else
-			static assert(0, "Operator "~op~" not implemented");
+			static assert(0, "Operator "~op~"= not implemented");
 	}
+    
+    Sine_fit opBinary(string op)(Sine_fit rhs) {
+        static if(op == "-") {
+            enforce(this.num_waves == rhs.num_waves);
+            Sine_fit res = new Sine_fit(this.num_waves);
+            
+            for(int i=0; i<sols[0].num_waves; ++i) {
+				res.amplitude[i] = amplitude[i] - sol.amplitude[i];
+				res.frequency[i] = frequency[i] - sol.frequency[i];
+				res.phase[i] = phase[i] - sol.phase[i];
+				res.offset[i] = offset[i] -  sol.offset[i];
+            }
+        }
+        else
+            static assert(0, "Operator "~op~" not implemented");
+    }
 }
 
 double uniform_local(double min, double max) {

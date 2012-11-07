@@ -4,15 +4,15 @@ import sine_fit;
 void main(string[] args) {
 //	FloatingPointControl fpctrl;
 //	fpctrl.enableExceptions(FloatingPointControl.severeExceptions);     //for debugging
-	if(args.length != 5) {
+	if(args.length != 6) {
 //		throw new Exception("Incorrect number of arguments. Should be 5");
 		writeln("using defaults");
-		args = new string[5];
-		args[1] = "/home/john/Git/ES/examples/sine_fit/evol_cfg.yaml";
-		args[2] = "/home/john/Documents/Data_from_boris/nice/prep/_r_1.dat";
+		args = new string[6];
+		args[1] = "/home/john/Git/John-Colvin/ES/examples/sine_fit/test_cfg.yaml";
+		args[2] = "generate";//"/home/john/Documents/Data_from_boris/nice/prep/_r_1.dat";
 		args[3] = "1000";
 		args[4] = "0.2";
-		args[5] = "/home/john/Git/ES/examples/sine_fit/ES_cfg.yaml";
+		args[5] = "/home/john/Git/John-Colvin/ES/examples/sine_fit/ES_cfg.yaml";
 	}
 	
 	auto problem = new Data_fit(args[2],to!int(args[3]),to!double(args[4]));
