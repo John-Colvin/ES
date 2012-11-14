@@ -4,12 +4,12 @@ solution:
         min:            0
         max:            2
         mut_min:        0
-        mut_max:        0.1
+        mut_max:        0.01
     frequency:
         min:            0
         max:            2
         mut_min:        0
-        mut_max:        0.1
+        mut_max:        0.01
     phase:
         min:            0
         max:            0

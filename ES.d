@@ -26,7 +26,7 @@ class Population(T) {
     
 	string style;
     string foldername;
-    File fitness;
+    File fitness, means, bests;
 	
 	//initialises the population
 	//initialise the solutions, allocate memory for parents etc...
@@ -62,6 +62,7 @@ class Population(T) {
 	
 	//runs the algorithm
 	void run() {		
+        output_files_init();
 		//iterate over generations.
 		for(int i=1; i<=num_generations; ++i) {
 			write("\rgeneration: ",i,"  ");
@@ -72,14 +73,19 @@ class Population(T) {
             
             if(memory) {
                 history ~= class_arr_dup(solutions);
-                topN(history_best, history[$-1]);
-                history_best
+                if(history_best.length == 0)
+                    history_best ~= history[$-1][0..num_parents];
+                else
+                    topN(history_best, history[$-1]);
+                sort(history_best); //not strictly necessary, but it hardly
+                                    //takes any time for small pops.
             }
             
+            select();
+            
             write_out(i);
-			
-			select();
-			replace();
+
+			replace();            
 		}
 		//final eval and sort for results.
 		evaluate();
@@ -93,15 +99,27 @@ class Population(T) {
 		auto time_stamp = Clock.currTime().toISOExtString()[0..19];
 		foldername = "results/output_" ~ time_stamp;
 		mkdir(foldername);
-		fitness = File("fitness.txt","w");
+        mkdir(foldername~"/gens");
+		fitness = File(foldername~"/fitness.txt","w");
+        bests = File(foldername~"/bests.txt","w");
+        if(memory)
+            means = File(foldername~"/means.txt","w");
     }
     
     void write_out(int gen_num) {
 //		writeln(solutions[0]);
-        auto record = File(foldername~"/gen"~to!string(gen_num),"w");
+        auto record = File(foldername~"/gens/gen"~to!string(gen_num),"w");
 		record.write(csv_dump());
 //		writeln("\n",solutions);
-		fitness.write(solutions[0].fitness,"\n");
+        if(memory) {
+            fitness.write(history_best[0].fitness,"\n");
+            means.write(parents[0].csv_string());
+            bests.write(history_best[0].csv_string);
+        }
+        else {
+            fitness.write(solutions[0].fitness,"\n");
+            bests.write(solutions[0].csv_string);
+        }
     }
 	
 	//dumps the all the solutions (paramters as csv, see 
@@ -114,18 +132,25 @@ class Population(T) {
 	}
 	
 	//returns the best solutions to date
+    //might have side effects......
 	T[] best(int n=1) {
-		enforce(n>0);
+        enforce(n>0);
+        T[] sols;
+        if(memory)
+            sols = history_best;
+        else
+            sols = solutions;
+
 		if(n==1) {
+            if(memory)
+                return history_best[0..1];
 			if(top_sorted)
-				return solutions[0..1];
-			else {
-				return minPos(solutions)[0..1];
-			}
+				return sols[0..1];
+			return minPos(sols)[0..1];
 		}
 		else {
-			partialSort(solutions,n);
-			return(solutions[0..n]);
+			partialSort(sols,n);
+			return(sols[0..n]);
 		}
 	}
 	
@@ -153,7 +178,7 @@ class Population(T) {
 	void select() {
 		if(cmp(style,"new") == 0) {
 			parents[0] = child();
-            writeln(parents[0]);
+//            writeln(parents[0]);
 		}
 		else
 			foreach(int i, ref parent; parents)
@@ -197,16 +222,14 @@ class Population(T) {
 	}
 	
 	T child() {
-		if(!partitioned) {
-			topN(solutions, num_parents);
-			partitioned = true;
-		}
-        auto to_average = solutions[0..num_parents]
-        if(memory) {
-            partialSort(history_flat, num_parents);
-            
+        T[] to_average;
+        if(memory)
+            return T.average(history_best);
+        if(!partitioned) {
+            topN(solutions, num_parents);
+            partitioned = true;
         }
-		return T.average();
+        return T.average(solutions[0..num_parents]);
 	}
     
     void read_ES_config(string filename) {
@@ -227,10 +250,19 @@ class Solution (T){
 	T derived_object;
 	int id;
 	
+    this() {}
+    
 	this(Problem!(T) problem, T derived_object) {
 		this.problem = problem;
 		this.derived_object = derived_object;
 	}
+    
+    this(Solution a) {
+        this.problem = a.problem;
+        this.derived_object = a.derived_object;
+        fitness = a.fitness;
+        id = a.id;
+    }
 	
 	void evaluate() {
 		fitness = problem.fitness_calc(derived_object);
@@ -244,6 +276,9 @@ class Solution (T){
 	
 	abstract void mutate(T parent);
 	
+    //enables comparisons => we can run standard sorting/parition algos 
+    //on arrays of solutions.
+    //a very good move. Saves SO much code in the main algorithm.
 	override int opCmp(Object o) {
 		auto test = this.fitness - (cast(T) o).fitness;
 		if(test<0)

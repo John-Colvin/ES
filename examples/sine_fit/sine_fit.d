@@ -46,7 +46,7 @@ class Sine_fit : Solution!(Sine_fit) {
 	//basic constructor for a blank sine_fit
 	//has to be template to overcome bug in d
 	this(T=bool)(int num_waves_in) {
-		this.num_waves = num_waves;
+		this.num_waves = num_waves_in;
 		amplitude = new double[num_waves];
 		frequency = new double[num_waves];
 		phase = new double[num_waves];
@@ -97,6 +97,7 @@ class Sine_fit : Solution!(Sine_fit) {
     
     //copy constructor. Again, has to be a bloody template.....
     this(T = bool)(Sine_fit a) {
+		super(a);
         num_waves = a.num_waves;
         init_params = a.init_params;
         
@@ -217,15 +218,16 @@ class Data_fit : Problem!(Sine_fit) {
 		if(filename == "generate") {
 			dataX = new double[length];
 			dataY = new double[length];
-			auto divisor = length / 10;
+			auto divisor = to!double(length) / 10;
 			foreach(int i, ref datax; dataX) {
-				datax = i/divisor;
+				datax = to!double(i)/divisor;
 				dataY[i] = sin(datax) + noise_ampl*normal();
 			}
 		}
 		else {
 			auto f = readText(filename);
 			
+            //this is specific to a certain file format. Need a general approach
 			auto cleaned_app = appender!(char[])();
 			cleaned_app.reserve(f.length);
 			foreach(line; f.splitLines()){
