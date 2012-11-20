@@ -7,7 +7,7 @@ import std.exception;
 
 //Population class, holds the core runnings of the algorithm, including 
 //initialization of solutions;
-class Population(T) {
+class Population(T:Solution) {
     T[][] history;
     T[] history_best;
 	T[] solutions;
@@ -253,7 +253,7 @@ class Population(T) {
 
 //Base class for solutions. It is aware of both it's immediately derived 
 //object and the problem that is to be solved.
-class Solution (T){
+class Solution (T:Solution){
 	double fitness;
 	Problem!(T) problem;
 	T derived_object;
@@ -303,7 +303,7 @@ class Solution (T){
 }
 
 //Base class for the problem
-class Problem (T){
+class Problem (T:Solution){
 	abstract double fitness_calc(T solution);
 }
 
