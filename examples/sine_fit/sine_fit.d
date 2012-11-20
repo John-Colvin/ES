@@ -218,7 +218,8 @@ class Data_fit : Problem!(Sine_fit) {
 		if(filename == "generate") {
 			dataX = new double[length];
 			dataY = new double[length];
-			auto divisor = to!double(length) / 10;
+//			auto divisor = to!double(length) / 10;
+			auto divisor = 1.5;
 			foreach(int i, ref datax; dataX) {
 				datax = to!double(i)/divisor;
 				dataY[i] = sin(datax) + noise_ampl*normal();
@@ -284,7 +285,7 @@ class Data_fit : Problem!(Sine_fit) {
 	
 	void print_fit(Sine_fit fit, string filename) {
 		auto app = appender!string();
-		formattedWrite(app,"Data,Fit\n");
+		formattedWrite(app,"#Data,Fit\n");
 		for(int i = 0; i < dataX.length; ++i) {
 			double result = 0;
 			for(int j = 0; j < fit.amplitude.length; ++j) {

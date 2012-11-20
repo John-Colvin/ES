@@ -8,6 +8,7 @@ A simple evolutionary strategies package for D.
 
 This is a work in progress and might completely change overnight. Be warned.
 At this early stage, I offer no promises that this should compile at any given time, let alone run without errors and provide any useful results.
+There are a lot of hacks in the code at the moment. These will be phased out in time when I get around to it.
 
 Prerequisites:
 A D2 compiler with phobos and druntime. I'm currently using the latest dmd from github and that's the only compiler i'm attempting to maintain compatability with at this time. Having said that, it should work with anything vaguely up-to-date.

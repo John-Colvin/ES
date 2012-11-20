@@ -1,4 +1,4 @@
-pop_size:           10
+pop_size:           30
 num_parents:        5
-num_generations:    50
+num_generations:    70
 style:              new

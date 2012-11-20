@@ -76,7 +76,7 @@ class Population(T) {
                 if(history_best.length == 0)
                     history_best ~= history[$-1][0..num_parents];
                 else
-                    topN(history_best, history[$-1]);
+                    topN(history_best, history[$-1]); //copies topN from right to left.
                 sort(history_best); //not strictly necessary, but it hardly
                                     //takes any time for small pops.
             }
@@ -100,6 +100,8 @@ class Population(T) {
 		foldername = "results/output_" ~ time_stamp;
 		mkdir(foldername);
         mkdir(foldername~"/gens");
+        if(memory)
+			mkdir(foldername~"/bests");
 		fitness = File(foldername~"/fitness.txt","w");
         bests = File(foldername~"/bests.txt","w");
         if(memory)
@@ -115,6 +117,8 @@ class Population(T) {
             fitness.write(history_best[0].fitness,"\n");
             means.write(parents[0].csv_string());
             bests.write(history_best[0].csv_string);
+            auto best_pop = File(foldername~"/bests/best_asof_gen"~to!string(gen_num),"w");
+            best_pop.write(csv_dump(history_best));
         }
         else {
             fitness.write(solutions[0].fitness,"\n");
@@ -123,12 +127,16 @@ class Population(T) {
     }
 	
 	//dumps the all the solutions (paramters as csv, see 
-	string csv_dump() {
+	string csv_dump(T[] to_print) {
 		auto app = appender!string();
-		foreach(sol; solutions) {
+		foreach(sol; to_print) {
 			app.put(sol.csv_string());
 		}
 		return app.data;
+	}
+	
+	string csv_dump() {
+		return csv_dump(solutions);
 	}
 	
 	//returns the best solutions to date
@@ -157,6 +165,7 @@ class Population(T) {
 	//evalutes the entire population in parallel.
 	//need to optimise taskPool chunksize?
 	void evaluate() {
+        //could use taskPool.map for this?
 		foreach(ref solution; taskPool.parallel(solutions)) {
 //		foreach(solution; solutions) {
 			solution.evaluate();

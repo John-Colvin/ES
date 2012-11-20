@@ -2,10 +2,8 @@ import orange.util.Reflection : nameOfFieldAt;
 import std.range : lockstep;
 
 auto class_arr_dup(T)(T[] array) {
-	pragma(msg,typeof(array));
     T[] res = new T[array.length]; 
     foreach(el_old, ref el_new; lockstep(array,res)) {
-		pragma(msg,typeof(el_old));
         el_new = new T(el_old);
     }
     return res;

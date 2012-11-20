@@ -10,7 +10,7 @@ void main(string[] args) {
 		args = new string[6];
 		args[1] = "/home/john/Git/John-Colvin/ES/examples/sine_fit/test_cfg.yaml";
 		args[2] = "generate";//"/home/john/Documents/Data_from_boris/nice/prep/_r_1.dat";
-		args[3] = "10000";
+		args[3] = "1000";
 		args[4] = "0.4";
 		args[5] = "/home/john/Git/John-Colvin/ES/examples/sine_fit/ES_cfg.yaml";
 	}
