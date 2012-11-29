@@ -215,7 +215,7 @@ class Population(T:Solution) {
                     to_skip = null;
 				continue;
 			}
-			sol._mutate(parent);	//modify sol based on parent
+			sol.mutate(parent);	//modify sol based on parent
 			children_so_far++;		//add one to the child counter
             
 			//check if given sol has had enough offspring
@@ -250,79 +250,3 @@ class Population(T:Solution) {
         style = root["style"].as!string;
     }
 };
-
-//Base class for solutions. It is aware of both it's immediately derived 
-//object and the problem that is to be solved.
-class Solution (T:Solution){
-	double fitness;
-	Problem!(T) problem;
-	T derived_object;
-	int id;
-	
-    this() {}
-    
-	this(Problem!(T) problem, T derived_object) {
-		this.problem = problem;
-		this.derived_object = derived_object;
-	}
-    
-    this(Solution a) {
-        this.problem = a.problem;
-        this.derived_object = a.derived_object;
-        fitness = a.fitness;
-        id = a.id;
-    }
-	
-	void evaluate() {
-		fitness = problem.fitness_calc(derived_object);
-//		writeln(fitness);
-	}
-	
-	void _mutate(T parent) {
-		id = parent.id;
-		mutate(parent);
-	}
-	
-	abstract void mutate(T parent);
-	
-    //enables comparisons => we can run standard sorting/parition algos 
-    //on arrays of solutions.
-    //a very good move. Saves SO much code in the main algorithm.
-	override int opCmp(Object o) {
-		auto test = this.fitness - (cast(T) o).fitness;
-		if(test<0)
-			return -1;
-		else if(test>0)
-			return 1;
-		else
-			return 0;
-	}
-	
-	//should i force toString and csv_string to be implemented
-	//by using abstract?
-}
-
-//Base class for the problem
-class Problem (T:Solution){
-	abstract double fitness_calc(T solution);
-}
-
-void read_cfg(T)(ref T params, string filename) {
-	Node root = Loader(filename).load();
-	Node solution = root["solution"];
-
-	params = new T(to!int(solution.length));
-
-	auto link = string_access!(double[2][])(params);
-	
-	int i=0;
-	foreach(Node set; solution) {
-		foreach(string name, Node value; set) {
-			link[name~"_range"][i][0] = value["min"].as!double;
-			link[name~"_range"][i][1] = value["max"].as!double;
-			link[name~"_mut_range"][i][0] = value["mut_min"].as!double;
-			link[name~"_mut_range"][i][1] = value["mut_max"].as!double;
-		}
-		++i;
-	}
-}

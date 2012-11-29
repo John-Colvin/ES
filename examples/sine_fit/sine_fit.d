@@ -160,7 +160,7 @@ class Sine_fit : Solution!(Sine_fit) {
 		else
 			static assert(0, "Operator "~op~" not implemented for type Sine_fit");
 	}*/
-	void opOpAssign(string op, T)(T rhs) {
+	auto opOpAssign(string op, T)(T rhs) {
 		static if(op == "/") {
 			foreach(int i, dummy; amplitude) {
 				amplitude[i] /= rhs;
@@ -168,6 +168,7 @@ class Sine_fit : Solution!(Sine_fit) {
 				phase[i] /= rhs;
 				offset[i] /= rhs;
 			}
+			return this;
 		}
 		else
 			static assert(0, "Operator "~op~"= not implemented");
@@ -270,13 +271,11 @@ class Data_fit : Problem!(Sine_fit) {
 	override double fitness_calc(Sine_fit fit) {
 		double fitness = 0;
 
-		for(int i = 0; i < dataX.length; ++i) {
+		foreach(int i, x; dataX) {
 			double result = 0;
-
-			for(int j = 0; j < fit.amplitude.length; ++j) {
-				result += fit.offset[j] + fit.amplitude[j] * sin(dataX[i] * fit.frequency[j] + fit.phase[j]);
+			foreach(o,a,w,p; lockstep(fit.offset,fit.amplitude,fit.frequency,fit.phase)) {
+				result += o + a*sin(w*x + p);
 			}
-
 			fitness += (result - dataY[i]) * (result - dataY[i]);
 		}
 		fitness /= dataX.length;
