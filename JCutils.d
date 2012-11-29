@@ -3,6 +3,19 @@ import std.range : lockstep, isArray, ElementType;
 import std.conv : to;
 import std.string : chompPrefix;
 
+//polar method to generate normal variable, mean 0 variance 1
+//ignores half the guesses, memory would make it
+//thread unsafe????
+double normal() {
+	double u,v,s;
+	do {
+		u = uniform(-1f,1f);
+		v = uniform(-1f,1f);
+		s = u*u + v*v;
+	} while(s==0 || s>1);
+	return(u*sqrt(-2*log(s)/s));
+}
+
 auto class_arr_dup(T)(T[] array) {
     T[] res = new T[array.length]; 
     foreach(el_old, ref el_new; lockstep(array,res)) {

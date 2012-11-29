@@ -1,4 +1,4 @@
-import ES_interface;
+import ES;
 import std.stdio, std.conv;
 
 alias Solution!Sine_fit_params Sine_fit;

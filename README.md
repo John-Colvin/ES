@@ -1,8 +1,8 @@
 ES
 ==
 
-new_algo branch:
-implements some new more flexible internals, including a change from parents being integer indexes to being class references
+new_interface branch:
+A full refactoring of the code with the aim of providing a generic template to solve new problems with. This means very heavy use of templates and mixins, so the code isn't the most readable in the world. It does make for a nice clean interface however.
 
 A simple evolutionary strategies package for D.
 

@@ -2,6 +2,7 @@ import std.algorithm, std.stdio, std.parallelism, std.file;
 import std.datetime, std.conv, std.math, std.array;
 import yaml, orange.util.Reflection, JCutils;
 import std.exception;
+public import solution;
 
 //processing topology info? Not really sure how
 
