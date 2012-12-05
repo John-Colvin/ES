@@ -1,14 +1,22 @@
-import std.algorithm, std.stdio, std.parallelism, std.file;
-import std.datetime, std.conv, std.math, std.array;
-import yaml, orange.util.Reflection, JCutils;
-import std.exception;
+import std.algorithm : partialSort, topN, sort;
+import std.stdio : writeln, stdout, File, write, writefln;
+import std.parallelism : taskPool;
+import std.file : mkdir, minPos, FileException;
+import std.datetime;
+import std.conv : to;
+import std.math;
+import std.array;
+import std.string;
+import JCutils;
+import yaml;
+import std.exception : enforce;
 public import solution;
 
 //processing topology info? Not really sure how
 
 //Population class, holds the core runnings of the algorithm, including 
 //initialization of solutions;
-class Population(T:Solution) {
+class Population(T) {
     T[][] history;
     T[] history_best;
 	T[] solutions;
@@ -81,6 +89,8 @@ class Population(T:Solution) {
                 sort(history_best); //not strictly necessary, but it hardly
                                     //takes any time for small pops.
             }
+            
+            writeln(history_best[0].fitness);
             
             select();
             

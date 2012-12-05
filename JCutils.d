@@ -1,7 +1,61 @@
 import orange.util.Reflection : nameOfFieldAt;
-import std.range : lockstep, isArray, ElementType;
+import std.range : lockstep, ElementType;
+import std.traits : isArray;
 import std.conv : to;
-import std.string : chompPrefix;
+import std.string : chompPrefix, cmp;
+import std.random : uniform;
+import std.algorithm : reduce;
+import core.stdc.math;
+
+const nan = double.nan;
+
+auto sum(T) (T range) {
+	return reduce!("a + b")(range);
+}
+
+auto mean(T)(T arr) {
+	return sum(arr) / arr.length;
+}
+/*
+auto ma(T)(T[] a, size_t w, bool nans = false, centered = false) {
+	if(nans) {
+		auto length = a.length;
+		auto start = ;
+		auto end = 
+	}
+	else {
+		auto length = a.length - w + 1;
+	}
+	T[] ret = new T[length];
+	
+	foreach(i; 0..length) 
+		ret[i] = mean(a[i..i+w]);
+	
+	return ret;
+}
+
+unittest
+{
+	double[] data = [1,2,3,4,5,6,7,8];
+	auto width = 4;
+	assert(ma(data, width) == [2.5, 3.5, 4.5, 5.5, 6.5]);
+}*/
+
+
+/*
+auto randn(distribution = "uniform", size_t dimensions = 1, string boundaries = "[)", T)
+			(T a, T b, size_t[] lengths) 
+{
+	static if(cmp(distribution, "uniform") == 0) {
+		mixin("T" ~ RepeatString!("[]",dimensions) ~ " ret = " ~ 
+			  RepeatString!("[]",dimensions -1) ~ "[lengths[0]];");
+		foreach(i; 1..dimensions)
+			foreach(ref el; ret)
+				mixin("el = new T" ~ ";");
+	}
+}
+*/
+auto uniform_(string boundaries = "[)", dimensions , T1, T2)(T1 a, T2 b); 
 
 //polar method to generate normal variable, mean 0 variance 1
 //ignores half the guesses, memory would make it
@@ -83,6 +137,18 @@ template InsertFirstDimension (T, size_t length = 0) {
 		  ~ DimensionsString!T ~ " InsertFirstDimension;");
 }
 
+template ArraySizes (sizes...) {
+	const ArraySizes = ArraySizesImpl!(0, sizes);
+}
+
+template ArraySizesImpl (size_t i, sizes...) {
+	static if(i == sizes.length - 1)
+		const ArraySizesImpl = "[" ~ to!string(sizes[i]) ~ "]";
+	else
+		const ArraySizesImpl = "[" ~ to!string(sizes[i]) ~ "]" ~
+							   ArraySizesImpl!(sizes, i+1);
+}
+
 //Repeats string "s" size_t "num" times at compile-time
 template RepeatString (string s, size_t num) {
 	static if(num == 0)
@@ -102,21 +168,49 @@ template _is_arithmetic(alias a) {
 	const _is_arithmetic = __traits(isArithmetic, a);
 }
 
+template _is_arithmetic(T) {
+	const _is_arithmetic = __traits(isArithmetic, T);
+}
+
 template _is_integral(alias a) {
 	const _is_integral = __traits(isIntegral, a);
+}
+
+template _is_integral(T) {
+	const _is_integral = __traits(isIntegral, T);
 }
 
 template _is_floating(alias a) {
 	const _is_floating = __traits(isFloating, a);
 }
 
-//provides an associative array, by name, of the fields of obj
+template _is_floating(T) {
+	const _is_floating = __traits(isFloating, T);
+}
+
+
+//SURELY, seeing as we know all the member names at compile time, a
+//switch statement could be generated....
+
+//wrapper struct for string_access.
+//sorts out the pointers.
+struct AAof (T) {
+	T*[string] field_ptrs;
+	this(U)(ref U obj) {
+		field_ptrs = string_access!T(obj);
+	}
+	auto ref opIndex(U : string)(U field) {
+		return *(field_ptrs[field]);
+	}
+}
+
+//provides an associative array, by name, of pointers to the fields of obj
 //that are of type U. Useful for reading in config files or for
 //inspection of variables. 
 //Possible future: provide a function that returns all of the
 //fields. In a tuple? A class/struct?
 auto string_access(U,T)(ref T obj) {
-	U[string] dict;
+	U*[string] dict;
 	mixin(dictString!(T, U, "obj"));
 	return(dict);
 }
@@ -140,7 +234,7 @@ template dictStringImpl (T, U, string name, size_t i) {
 	else static if(T.tupleof.length -1 == i) {
 		static if(is(typeof(T.tupleof[i]) == U))
 			const dictStringImpl = "dict[\"" ~ nameOfFieldAt!(T,i)
-						~ "\"] = " ~ name ~ "." 
+						~ "\"] = &" ~ name ~ "." 
 						~ nameOfFieldAt!(T,i) ~ ";";
 		else 
 			const dictStringImpl = "";
@@ -148,7 +242,7 @@ template dictStringImpl (T, U, string name, size_t i) {
 	else {
 		static if(is(typeof(T.tupleof[i]) == U))
 			const dictStringImpl = "dict[\"" ~ nameOfFieldAt!(T,i) 
-						~ "\"] = " ~ name ~ "." 
+						~ "\"] = &" ~ name ~ "." 
 						~ nameOfFieldAt!(T,i) ~ ";\n" 
 						~ dictStringImpl!(T, U, name, i+1);
 		else

@@ -1,22 +1,33 @@
 import ES;
 import std.stdio, std.conv;
+import core.stdc.math;
+import std.file : readText;
+import std.range : appender;
+import std.string : splitLines, stripLeft, stripRight;
+import std.format : formattedWrite;
+import JCutils;
+import std.csv;
 
 alias Solution!Sine_fit_params Sine_fit;
 
 void main(string[] args) {
+	writeln();
+	
 	auto problem = new Data_fit(args[2],to!int(args[3]),to!double(args[4]));
 	
 	Init_params!Sine_fit_params init_params;
-	read_cfg!(double[2][])(init_params, args[1]);
+	read_cfg!(double, double[2][1])(init_params, args[1]);
 	
 	auto population = new Population!Sine_fit(problem,init_params,args[5]);
 
 	population.run();
 	
 	auto best = population.best();
-	writeln(best);
+	writeln(best[0]);
 	
-	problem.print_fit(best[0],"fit.txt");
+	problem.print_fit(best[0].params,"fit.txt");
+	
+	writeln();
 }
 
 //The types used for parameter values and mutabilities should implement
@@ -33,7 +44,7 @@ struct Sine_fit_params {
 	static auto blank() {
 		Sine_fit_params tmp;
 		foreach(ref param; tmp.tupleof) {
-			param[] = 0;
+			param.value[] = 0;
 			param.mutability[] = 0;
 		}
 		return tmp;
