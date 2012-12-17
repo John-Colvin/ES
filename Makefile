@@ -1,9 +1,11 @@
 DC?=dmd
-
-MAIN=ES.d JCutils.d solution.d test.d
+EXTRA?=
+MAIN?=test.d
+INCLUDES=ES.d JCutils.d solution.d
 
 main: 
-	$(DC) $(MAIN) -L-ldyaml -L-lorange -w -m64 -gc -noboundscheck
+	$(DC) $(MAIN) $(INCLUDES) -L-ldyaml -L-lorange -w -m64 -gc
+	#-O -inline -release -noboundscheck $(EXTRA)
 	
 run: main
 	./ES

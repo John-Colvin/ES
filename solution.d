@@ -1,7 +1,7 @@
 import std.random : uniform;
-import std.range : lockstep;
+import std.range : lockstep, ElementType;
 import std.traits : isArray;
-import orange.util.Reflection : nameOfFieldAt;
+//import orange.util.Reflection : nameOfFieldAt;
 import std.string : appender;
 import std.stdio : writeln;
 import JCutils;
@@ -49,21 +49,38 @@ template gen_fieldsImpl(T, size_t i) {
 }
 
 //currently only works with one type at a time.
+//only works with array types...
 void read_cfg(Q,U,T)(ref T params, string filename) {
     Node root = Loader(filename).load();
     Node solution = root["solution"];
 
     auto link = AAof!(U)(params);
     
-    int i=0; //has to be outside because solution is a tuple???
-    foreach(Node set; solution) {
-        foreach(string name, Node value; set) {
-            link[name~"_range"][i][0] = value["min"].as!Q;
-            link[name~"_range"][i][1] = value["max"].as!Q;
-            link[name~"_mut_range"][i][0] = value["mut_min"].as!Q;
-            link[name~"_mut_range"][i][1] = value["mut_max"].as!Q;
+    static if(isArray!(ElementType!U)) {
+        pragma(msg,"array types");
+        int i=0; //has to be outside because solution is a tuple???
+        foreach(Node set; solution) {
+            foreach(string name, Node value; set) {
+                link[name~"_range"][i][0] = value["min"].as!Q;
+                link[name~"_range"][i][1] = value["max"].as!Q;
+                link[name~"_mut_range"][i][0] = value["mut_min"].as!Q;
+                link[name~"_mut_range"][i][1] = value["mut_max"].as!Q;
+            }
+            ++i;
         }
-        ++i;
+    }
+    else {
+        pragma(msg,"scalar types");
+        auto set = solution[0];
+        foreach(string name, Node value; set) {
+                writeln(typeid(typeof(link[name~"_range"])));
+                writeln(name~"_range");
+                writeln(link);
+                link[name~"_range"][0] = value["min"].as!Q;
+                link[name~"_range"][1] = value["max"].as!Q;
+                link[name~"_mut_range"][0] = value["mut_min"].as!Q;
+                link[name~"_mut_range"][1] = value["mut_max"].as!Q;
+            }
     }
 }
 
@@ -96,6 +113,10 @@ class Solution (T){
     //has to be a template to work around a bug in D
     //mutabilities initialised to uniform. Is this right? It's gonna cause
     //problems with array parameters...
+    //
+    //Assumes that there is only 1 tpye of parameter.!!!!!!!
+    
+    //All the operator logic should be in the parameter class, not here
     this(U=bool)(Problem!T problem, Init_params!(T) init_params, int id) {
         this.problem = problem;
         this.id = id;
@@ -106,8 +127,7 @@ class Solution (T){
             params.initialise(init_params);
         }
         else {
-            auto link = AAof!(double[2][1])(init_params);
-            
+            auto link = AAof!(typeof((Init_params!T).tupleof[0]))(init_params);       //can only use 1 type!!!!!!!
             foreach(uint i, ref param; params.tupleof) {
                 auto name = nameOfFieldAt!(T,i);
                 
@@ -127,7 +147,7 @@ class Solution (T){
                 }
             }
         }
-        writeln(this);
+//        writeln(this);
     }
     
     //basic constructor for a blank sine_fit. All params initialised to 0
@@ -157,6 +177,7 @@ class Solution (T){
         fitness = problem.fitness_calc(params);
     }
     
+    //no mutation of mutabilities atm....
     void mutate(Solution parent) {
         id = parent.id;
         foreach(uint i, ref param; params.tupleof) {
@@ -169,7 +190,10 @@ class Solution (T){
                 foreach(ref mut; mut_vect) {
                     mut = normal();
                 }
+ //               writeln(mut_vect);
+ //               writeln(nameOfFieldAt!(T,i)," ",parent.params.tupleof[i]);
                 param[] = parent.params.tupleof[i][] + mut_vect[]*parent.params.tupleof[i].mutability[];
+ //               writeln(nameOfFieldAt!(T,i)," ",param);
             }
             else {
                 param = parent.params.tupleof[i] + normal()*parent.params.tupleof[i].mutability;
@@ -178,27 +202,37 @@ class Solution (T){
     }
     
     auto opOpAssign(string op, U)(U rhs) {
-        static if(!(op == '*' || op == '/'))
+        static if(!(op == "*" || op == "/"))
             static assert("operation: " ~op~ " not supported");
         foreach(uint i, ref param; params.tupleof) {
             static if(isArray!(typeof(param.value))) {
-                static if(isArray!(U))
-                    mixin("param[] " ~ op ~"= rhs[];");
-                else
-                    mixin("param[] " ~ op ~"= rhs;");
+                static if(isArray!(U)) {
+                    mixin("param[] " ~ op ~ "= rhs[];");
+                    mixin("param.mutability[] " ~ op ~ "= rhs[];");
+                }
+                else {
+                    mixin("param[] " ~ op ~ "= rhs;");
+                    mixin("param.mutability[] " ~ op ~ "= rhs;");
+                }
             }
-            else
+            else {
                 mixin("param " ~ op ~ "= rhs;");
+                mixin("param.mutability " ~ op ~ "= rhs;");
+            }
         }
         return this;
     }
 
     auto opOpAssign(string op, U:Solution!T)(U rhs) {
         foreach(uint i, ref param; params.tupleof) {
-            static if(isArray!(typeof(param.value)))
-                mixin("param[] " ~ op ~"= rhs.params.tupleof[i][];");
-            else
+            static if(isArray!(typeof(param.value))) {
+                mixin("param[] " ~ op ~ "= rhs.params.tupleof[i][];");
+                mixin("param.mutability[] " ~ op ~ "= rhs.params.tupleof[i].mutability[];");
+            }
+            else {
                 mixin("param " ~ op ~ "= rhs.params.tupleof[i];");
+                mixin("param.mutability " ~ op ~ "= rhs.params.tupleof[i].mutability;");
+            }
         }
         return this;
     }
@@ -206,10 +240,15 @@ class Solution (T){
     auto opBinary(string op, U:Solution!T)(U rhs) {
         U tmp = new U;
         foreach(uint i, ref param; tmp.params.tupleof) {
-            static if(isArray!(typeof(param.value)))
+            static if(isArray!(typeof(param.value))) {
                 mixin("param[] = this.params.tupleof[i][] " ~ op ~ " rhs.params.tupleof[i][];");
-            else
+                mixin("param.mutability[] = this.params.tupleof[i].mutability[] " 
+                      ~ op ~ " rhs.params.tupleof[i].mutability[];");
+            }
+            else {
                 mixin("param = this.params.tupleof[i] " ~ op ~ " rhs.params.tupleof[i];");
+                mixin("param.mutability = this.params.tupleof[i].mutability " ~ op ~ " rhs.params.tupleof[i].mutability;");
+            }
         }
         return tmp;
     }
@@ -218,13 +257,17 @@ class Solution (T){
         Solution!T tmp = new Solution!T;
         foreach(uint i, ref param; tmp.params.tupleof) {
             static if(isArray!(typeof(param.value))) {
-                static if(isArray!(U))
+                static if(isArray!(U)) {
                     mixin("param[] = this.params.tupleof[i][] " ~ op ~ " rhs[];");
-                else
-                    mixin("param[] = this.params.tupleof[i][] " ~ op ~ " rhs;");
+                    mixin("param.mutability[] = this.params.tupleof[i].mutability[] " ~ op ~ " rhs[];");
+                }
+                else {
+                    mixin("param.mutability[] = this.params.tupleof[i].mutability[] " ~ op ~ " rhs;");
+                }
             }   
-            else
-                mixin("param = this.params.tupleof[i] " ~ op ~ " rhs;");
+            else {
+                mixin("param.mutability = this.params.tupleof[i].mutability " ~ op ~ " rhs;");
+            }
         }
         return tmp;
     }
@@ -240,7 +283,11 @@ class Solution (T){
     }
 
     static auto average(Solution[] arr) {
-        return mean(arr);   //I guess this could be overidden to something interesting??
+        Solution!T tmp = new Solution!T;
+        foreach(sol; arr) {
+            tmp += sol;
+        }
+        return tmp /= arr.length;   //I guess this could be overidden to something interesting??
     }
 
     @property string csv_string() {

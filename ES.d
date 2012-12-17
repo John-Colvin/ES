@@ -81,7 +81,7 @@ class Population(T) {
             _sort();
             
             if(memory) {
-                history ~= class_arr_dup(solutions);
+                history ~= class_arr_dup(solutions);    //BAD VERY SLOW!!!
                 if(history_best.length == 0)
                     history_best ~= history[$-1][0..num_parents];
                 else
@@ -89,8 +89,8 @@ class Population(T) {
                 sort(history_best); //not strictly necessary, but it hardly
                                     //takes any time for small pops.
             }
-            
-            writeln(history_best[0].fitness);
+//            writeln();
+//           writeln(history_best[0]);
             
             select();
             
@@ -178,7 +178,7 @@ class Population(T) {
     void evaluate() {
         //could use taskPool.map for this?
         foreach(ref solution; taskPool.parallel(solutions)) {
-//      foreach(solution; solutions) {
+//        foreach(solution; solutions) {
             solution.evaluate();
         }
     }
@@ -198,7 +198,6 @@ class Population(T) {
     void select() {
         if(cmp(style,"new") == 0) {
             parents[0] = child();
-//            writeln(parents[0]);
         }
         else
             foreach(int i, ref parent; parents)
@@ -243,12 +242,16 @@ class Population(T) {
     
     T child() {
         T[] to_average;
-        if(memory)
+        if(memory) {
+ //           writeln(history_best);
+ //           writeln("AVERAGE: ",T.average(history_best));
             return T.average(history_best);
+        }
         if(!partitioned) {
             topN(solutions, num_parents);
             partitioned = true;
         }
+        
         return T.average(solutions[0..num_parents]);
     }
     

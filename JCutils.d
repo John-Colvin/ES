@@ -1,4 +1,4 @@
-import orange.util.Reflection : nameOfFieldAt;
+//import orange.util.Reflection : nameOfFieldAt;
 import std.range : lockstep, ElementType;
 import std.traits : isArray;
 import std.conv : to;
@@ -194,12 +194,12 @@ template _is_floating(T) {
 
 //wrapper struct for string_access.
 //sorts out the pointers.
-struct AAof (T) {
-    T*[string] field_ptrs;
-    this(U)(ref U obj) {
-        field_ptrs = string_access!T(obj);
+struct AAof (U) {
+    U*[string] field_ptrs;
+    this(T)(ref T obj) {
+        field_ptrs = string_access!U(obj);
     }
-    auto ref opIndex(U : string)(U field) {
+    auto ref opIndex(S : string)(S field) {
         return *(field_ptrs[field]);
     }
 }
@@ -212,6 +212,7 @@ struct AAof (T) {
 auto string_access(U,T)(ref T obj) {
     U*[string] dict;
     mixin(dictString!(T, U, "obj"));
+    dict.rehash;
     return(dict);
 }
 
@@ -248,4 +249,16 @@ template dictStringImpl (T, U, string name, size_t i) {
         else
             const dictStringImpl = dictStringImpl!(T, U, name, i+1);
     }
+}
+
+//Stolen from orange, For some reason it has all sorts of problems linking.
+template nameOfFieldAt (T, size_t position)
+{
+    static assert (position < T.tupleof.length, format!(`The given position "`, position, `" is greater than the number of fields (`, T.tupleof.length, `) in the type "`, T, `"`));
+    
+static if (T.tupleof[position].stringof.length > T.stringof.length + 3)
+const nameOfFieldAt = T.tupleof[position].stringof[1 + T.stringof.length + 2 .. $];
+
+else
+const nameOfFieldAt = "";
 }
