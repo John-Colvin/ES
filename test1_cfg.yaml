@@ -1,0 +1,13 @@
+solution:
+#set_1:
+  - x:
+        min:            -10
+        max:            10
+        mut_min:        0.01
+        mut_max:        0.1
+    y:
+        min:            -10
+        max:            10
+        mut_min:        0.01
+        mut_max:        0.1
+
