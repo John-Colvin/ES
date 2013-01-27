@@ -1,9 +1,6 @@
 ES
 ==
 
-new_interface branch:
-A full refactoring of the code with the aim of providing a generic template to solve new problems with. This means very heavy use of templates and mixins, so the code isn't the most readable in the world. It does make for a nice clean interface however.
-
 A simple evolutionary strategies package for D.
 
 This is a work in progress and might completely change overnight. Be warned.
